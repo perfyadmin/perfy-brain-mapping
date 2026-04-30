@@ -12,6 +12,7 @@ import { BrainLogo, SECTION_LOBE_COLORS } from "@/components/BrainLogo";
 import MusicControls from "@/components/MusicControls";
 import { useMusic } from "@/lib/music";
 import { toast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/lib/api";
 
 const scaleLabels = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"];
 
@@ -88,6 +89,8 @@ export default function AssessmentPage() {
   const { start: startMusic, stop: stopMusic, muted, setMuted } = useMusic();
   const [sectionIdx, setSectionIdx] = useState(0);
   const [responses, setResponses] = useState<Responses>({});
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Group questions by section
@@ -111,16 +114,39 @@ export default function AssessmentPage() {
     return out;
   }, [responses, sectionGroups]);
 
-  // Load saved
+  // Check completion status from Cloud
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
-    const saved = localStorage.getItem(`mm_responses_${user.id}`);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setResponses(parsed);
-      const firstUnfinished = sectionGroups.findIndex(g => g.questions.some(q => !parsed[q.id]));
-      if (firstUnfinished >= 0) setSectionIdx(firstUnfinished);
-    }
+    const token = localStorage.getItem("mm_token");
+    
+    const checkCompletion = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/assessment`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.completed) {
+            navigate("/results", { replace: true });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check completion", err);
+      }
+
+      // If not completed, load saved progress from local storage
+      const saved = localStorage.getItem(`mm_responses_${user.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setResponses(parsed);
+        const firstUnfinished = sectionGroups.findIndex(g => g.questions.some(q => !parsed[q.id]));
+        if (firstUnfinished >= 0) setSectionIdx(firstUnfinished);
+      }
+      setLoading(false);
+    };
+
+    checkCompletion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, navigate]);
 
@@ -195,15 +221,40 @@ export default function AssessmentPage() {
     }
   };
 
-  const handleComplete = () => {
-    if (!user || !allAnswered) return;
-    localStorage.setItem(`mm_completed_${user.id}`, "true");
-    toast({ title: "✨ Assessment complete!", description: "Generating your personality insights..." });
-    stopMusic();
-    navigate("/results");
+  const handleComplete = async () => {
+    if (!user || !allAnswered || submitting) return;
+    setSubmitting(true);
+    
+    const token = localStorage.getItem("mm_token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/assessment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ responses })
+      });
+
+      if (res.ok) {
+        // Clear local cache
+        localStorage.removeItem(`mm_responses_${user.id}`);
+        localStorage.setItem(`mm_completed_${user.id}`, "true"); // keep as backup
+        toast({ title: "✨ Assessment complete!", description: "Generating your personality insights..." });
+        stopMusic();
+        navigate("/results", { replace: true });
+      } else {
+        toast({ title: "Error", description: "Failed to submit assessment.", variant: "destructive" });
+        setSubmitting(false);
+      }
+    } catch (error) {
+      console.error("Submission failed", error);
+      toast({ title: "Network Error", description: "Could not reach the server.", variant: "destructive" });
+      setSubmitting(false);
+    }
   };
 
-  if (!user) return null;
+  if (!user || loading) return null;
 
   const theme = sectionThemes[current.meta.id];
   const lobeColor = SECTION_LOBE_COLORS[current.meta.id];
@@ -434,10 +485,10 @@ export default function AssessmentPage() {
             ) : (
               <Button
                 onClick={handleComplete}
-                disabled={!allAnswered}
+                disabled={!allAnswered || submitting}
                 className="gradient-accent text-accent-foreground gap-1 hover:scale-105 transition-transform"
               >
-                <CheckCircle className="w-4 h-4" /> Reveal My Insights
+                <CheckCircle className="w-4 h-4" /> {submitting ? "Submitting..." : "Reveal My Insights"}
               </Button>
             )}
           </div>

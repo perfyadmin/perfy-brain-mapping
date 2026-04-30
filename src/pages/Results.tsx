@@ -5,16 +5,44 @@ import { Button } from "@/components/ui/button";
 import ReportSummary from "@/components/ReportSummary";
 import { BrainLogo } from "@/components/BrainLogo";
 
+import { API_BASE_URL } from "@/lib/api";
+import { type Responses } from "@/lib/scoring";
+
 export default function ResultsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
+  const [responses, setResponses] = useState<Responses | null>(null);
 
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
-    const completed = localStorage.getItem(`mm_completed_${user.id}`);
-    if (!completed) { navigate("/assessment"); return; }
-    setReady(true);
+    
+    const fetchResults = async () => {
+      try {
+        const token = localStorage.getItem("mm_token");
+        const res = await fetch(`${API_BASE_URL}/assessment`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.completed && data.responses) {
+            setResponses(data.responses);
+            setReady(true);
+          } else {
+            navigate("/assessment");
+          }
+        } else {
+          // If fetch fails, fall back to check if they completed it locally? No, rely on cloud.
+          navigate("/assessment");
+        }
+      } catch (err) {
+        console.error("Failed to fetch results", err);
+        navigate("/assessment");
+      }
+    };
+    
+    fetchResults();
   }, [user, navigate]);
 
   if (!user || !ready) return null;
@@ -34,7 +62,7 @@ export default function ResultsPage() {
             <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>Dashboard</Button>
           </div>
         </div>
-        <ReportSummary targetUser={user} />
+        {responses && <ReportSummary targetUser={user} responses={responses} />}
       </div>
     </div>
   );

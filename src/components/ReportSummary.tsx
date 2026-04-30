@@ -36,11 +36,11 @@ const archetypeLines: Record<string, string> = {
 
 interface Props {
   targetUser: User;
+  responses: Responses;
 }
 
-export default function ReportSummary({ targetUser }: Props) {
+export default function ReportSummary({ targetUser, responses }: Props) {
   const { user: viewer } = useAuth();
-  const responses: Responses = JSON.parse(localStorage.getItem(`mm_responses_${targetUser.id}`) || "{}");
   const results = calculateAllResults(responses, targetUser.role === "employee");
 
   const isAdmin = viewer?.role === "admin";
