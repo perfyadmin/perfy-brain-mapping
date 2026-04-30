@@ -16,19 +16,20 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setTimeout(() => {
-      if (login(email, password)) {
-        const user = JSON.parse(localStorage.getItem("mm_user") || "{}");
-        navigate(user.role === "admin" ? "/admin" : "/dashboard");
-      } else {
-        setError("Invalid credentials. Try a demo email or register.");
-        setLoading(false);
-      }
-    }, 250);
+    
+    const success = await login(email, password);
+    
+    if (success) {
+      const user = JSON.parse(localStorage.getItem("mm_user") || "{}");
+      navigate(user.role === "admin" ? "/admin" : "/dashboard");
+    } else {
+      setError("Invalid email or password.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -133,12 +134,7 @@ export default function LoginPage() {
                   </button>
                 </p>
               </div>
-              <div className="mt-4 p-3.5 rounded-xl bg-muted/60 text-xs text-muted-foreground border">
-                <p className="font-semibold mb-1.5 text-foreground">Demo Accounts:</p>
-                <p>Admin: admin@admin.com</p>
-                <p>Users: john@example.com, sarah@example.com</p>
-                <p className="mt-1.5 italic opacity-70">Use any password</p>
-              </div>
+
             </CardContent>
           </div>
         </div>

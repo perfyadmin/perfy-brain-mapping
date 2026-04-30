@@ -13,34 +13,40 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"student" | "employee">("student");
   const [companyCode, setCompanyCode] = useState("");
   const [department, setDepartment] = useState("");
   const [school, setSchool] = useState("");
   const [error, setError] = useState("");
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const { register, getCompanies } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { register } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    setCompanies(getCompanies());
-  }, [getCompanies]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (role === "employee" && !companyCode) { setError("Please select your company."); return; }
+    if (password !== confirmPassword) { setError("Passwords do not match."); return; }
+    if (role === "employee" && !companyCode) { setError("Please enter your company code."); return; }
     if (role === "student" && !school) { setError("Please enter your school/college name."); return; }
 
-    const success = register({
+    setLoading(true);
+    const success = await register({
       name, email, password, role, phone,
       companyCode: role === "employee" ? companyCode : undefined,
       department: role === "employee" ? department : undefined,
       school: role === "student" ? school : undefined,
     });
 
-    if (success) { navigate("/dashboard"); } else { setError("Email already registered or invalid company code."); }
+    if (success) { 
+      navigate("/dashboard"); 
+    } else { 
+      setError("Registration failed. Email might already be registered."); 
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,7 +72,7 @@ export default function RegisterPage() {
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${role === "student" ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/40"}`}>
                   <GraduationCap className={`w-6 h-6 ${role === "student" ? "text-primary" : "text-muted-foreground"}`} />
                   <div className="text-left">
-                    <p className={`font-semibold text-sm ${role === "student" ? "text-primary" : "text-foreground"}`}>🎓 Student</p>
+                    <p className={`font-semibold text-sm ${role === "student" ? "text-primary" : "text-foreground"}`}> Student</p>
                     <p className="text-xs text-muted-foreground">Learning assessment</p>
                   </div>
                 </button>
@@ -74,7 +80,7 @@ export default function RegisterPage() {
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${role === "employee" ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/40"}`}>
                   <Briefcase className={`w-6 h-6 ${role === "employee" ? "text-primary" : "text-muted-foreground"}`} />
                   <div className="text-left">
-                    <p className={`font-semibold text-sm ${role === "employee" ? "text-primary" : "text-foreground"}`}>💼 Employee</p>
+                    <p className={`font-semibold text-sm ${role === "employee" ? "text-primary" : "text-foreground"}`}> Employee</p>
                     <p className="text-xs text-muted-foreground">Performance system</p>
                   </div>
                 </button>
@@ -87,6 +93,7 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-1.5"><Label className="text-xs font-semibold uppercase tracking-wider">Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required className="h-11" /></div>
             <div className="space-y-1.5"><Label className="text-xs font-semibold uppercase tracking-wider">Password</Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Create a strong password" required className="h-11" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-semibold uppercase tracking-wider">Confirm Password</Label><Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm your password" required className="h-11" /></div>
 
             {role === "student" && (
               <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border animate-fade-in">
@@ -103,12 +110,7 @@ export default function RegisterPage() {
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><Building2 className="w-4 h-4 text-primary" /> Company Details</div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Company Code <span className="text-destructive">*</span></Label>
-                  <Select value={companyCode} onValueChange={setCompanyCode}>
-                    <SelectTrigger className="h-11"><SelectValue placeholder="Select your company" /></SelectTrigger>
-                    <SelectContent>
-                      {companies.map(c => (<SelectItem key={c.id} value={c.code}><span className="font-medium">{c.name}</span> <span className="text-muted-foreground ml-2">({c.code})</span></SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  <Input value={companyCode} onChange={e => setCompanyCode(e.target.value)} placeholder="Enter company code" required className="h-11" />
                   <p className="text-xs text-muted-foreground">Ask your HR for the company code</p>
                 </div>
                 <div className="space-y-1.5"><Label className="text-xs font-semibold">Department</Label><Input value={department} onChange={e => setDepartment(e.target.value)} placeholder="e.g., Engineering, HR, Sales" className="h-11" /></div>
@@ -116,8 +118,8 @@ export default function RegisterPage() {
             )}
 
             {error && <p className="text-destructive text-sm text-center bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2">{error}</p>}
-            <Button type="submit" className="w-full gradient-primary text-primary-foreground h-11 text-sm font-semibold hover:opacity-90">
-              🚀 Create Account
+            <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground h-11 text-sm font-semibold hover:opacity-90">
+              {loading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
           <div className="mt-4 text-center">

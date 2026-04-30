@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { API_BASE_URL } from "./api";
 
 export interface Company {
   id: string;
@@ -22,8 +23,8 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => boolean;
-  register: (data: RegisterData) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (data: RegisterData) => Promise<boolean>;
   logout: () => void;
   getCompanies: () => Company[];
   addCompany: (company: Omit<Company, "id">) => void;
@@ -66,56 +67,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("mm_companies", JSON.stringify(companies));
   };
 
-  const login = (email: string, _password: string): boolean => {
-    const users: User[] = JSON.parse(localStorage.getItem("mm_users") || "[]");
+  const login = async (email: string, password: string): Promise<boolean> => {
     if (email === "admin@admin.com") {
       const admin: User = { id: "admin", name: "Admin", email, role: "admin" };
       setUser(admin);
       localStorage.setItem("mm_user", JSON.stringify(admin));
       return true;
     }
-    const found = users.find(u => u.email === email);
-    if (found) {
-      setUser(found);
-      localStorage.setItem("mm_user", JSON.stringify(found));
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      setUser(data.user);
+      localStorage.setItem("mm_user", JSON.stringify(data.user));
+      localStorage.setItem("mm_token", data.token);
       return true;
+    } catch (err) {
+      console.error("Login failed:", err);
+      return false;
     }
-    return false;
   };
 
-  const register = (data: RegisterData): boolean => {
-    const users: User[] = JSON.parse(localStorage.getItem("mm_users") || "[]");
-    if (users.find(u => u.email === data.email)) return false;
+  const register = async (data: RegisterData): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-    let companyName: string | undefined;
-    if (data.role === "employee" && data.companyCode) {
-      const companies = getCompanies();
-      const company = companies.find(c => c.code === data.companyCode);
-      if (!company) return false;
-      companyName = company.name;
+      if (!res.ok) return false;
+
+      const responseData = await res.json();
+      setUser(responseData.user);
+      localStorage.setItem("mm_user", JSON.stringify(responseData.user));
+      localStorage.setItem("mm_token", responseData.token);
+      return true;
+    } catch (err) {
+      console.error("Registration failed:", err);
+      return false;
     }
-
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      phone: data.phone,
-      companyCode: data.companyCode,
-      companyName,
-      department: data.department,
-      school: data.school,
-    };
-    users.push(newUser);
-    localStorage.setItem("mm_users", JSON.stringify(users));
-    setUser(newUser);
-    localStorage.setItem("mm_user", JSON.stringify(newUser));
-    return true;
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("mm_user");
+    localStorage.removeItem("mm_token");
   };
 
   return (
