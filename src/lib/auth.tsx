@@ -45,12 +45,19 @@ export interface RegisterData {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("mm_user");
-    if (stored) setUser(JSON.parse(stored));
-  }, []);
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("mm_user");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (e) {
+          return null;
+        }
+      }
+    }
+    return null;
+  });
 
   const getCompanies = (): Company[] => {
     return JSON.parse(localStorage.getItem("mm_companies") || "[]");
