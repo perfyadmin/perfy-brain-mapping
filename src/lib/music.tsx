@@ -4,9 +4,10 @@ const STORAGE_KEY = "pia_music_url";        // admin-uploaded data URL
 const VOLUME_KEY = "pia_music_volume";
 const MUTE_KEY = "pia_music_muted";
 
+import defaultMusicUrl from "@/assets/music.mp3";
+
 // Default ambient track — hosted free MP3. Falls back gracefully if blocked.
-const DEFAULT_TRACK =
-  "https://cdn.pixabay.com/audio/2022/10/30/audio_347111d654.mp3";
+const DEFAULT_TRACK = defaultMusicUrl;
 
 interface MusicCtx {
   playing: boolean;
