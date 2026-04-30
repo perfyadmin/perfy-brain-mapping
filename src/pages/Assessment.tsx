@@ -210,7 +210,7 @@ export default function AssessmentPage() {
 
   return (
     <div
-      className={`relative min-h-screen bg-gradient-to-br ${theme.bgGradient} transition-colors duration-1000 overflow-hidden`}
+      className={`relative min-h-screen bg-gradient-to-br ${theme.bgGradient} transition-colors duration-1000`}
       ref={containerRef}
     >
       {/* Per-section animated background — three slow drifting orbs in the
