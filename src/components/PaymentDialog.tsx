@@ -152,8 +152,6 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
           } catch (err) {
             console.error(err);
             toast({ title: "Error", description: "Something went wrong during verification.", variant: "destructive" });
-          } finally {
-            setSubmitted(false);
           }
         },
         prefill: {
@@ -162,19 +160,18 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
         },
         theme: {
           color: "#3b82f6", // Primary blue color
-        },
-        modal: {
-          ondismiss: function() {
-            setSubmitted(false);
-          }
         }
       };
 
       const rzp = new (window as any).Razorpay(options);
       rzp.on('payment.failed', function (response: any) {
         toast({ title: "Payment Failed", description: response.error.description, variant: "destructive" });
-        setSubmitted(false);
       });
+      
+      // Crucial Fix: Close the Radix UI Dialog BEFORE opening Razorpay.
+      // Radix Dialogs trap focus, which prevents users from typing in the Razorpay iframe on mobile!
+      onOpenChange(false);
+      
       rzp.open();
 
     } catch (err) {
