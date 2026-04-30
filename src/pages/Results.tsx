@@ -32,7 +32,6 @@ export default function ResultsPage() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>Dashboard</Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/assessment")}>Retake</Button>
           </div>
         </div>
         <ReportSummary targetUser={user} />
