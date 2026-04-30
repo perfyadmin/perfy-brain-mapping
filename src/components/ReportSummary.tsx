@@ -37,22 +37,20 @@ const archetypeLines: Record<string, string> = {
 interface Props {
   targetUser: User;
   responses: Responses;
+  unlocked: boolean;
+  setUnlocked: (val: boolean) => void;
 }
 
-export default function ReportSummary({ targetUser, responses }: Props) {
+export default function ReportSummary({ targetUser, responses, unlocked, setUnlocked }: Props) {
   const { user: viewer } = useAuth();
   const results = calculateAllResults(responses, targetUser.role === "employee");
 
   const isAdmin = viewer?.role === "admin";
-  const [unlocked, setUnlocked] = useState<boolean>(() =>
-    typeof window !== "undefined" && localStorage.getItem(`pia_unlocked_${targetUser.id}`) === "1"
-  );
   const [payOpen, setPayOpen] = useState(false);
   const canDownload = isAdmin || unlocked;
 
   const handleUnlock = () => {
     setUnlocked(true);
-    localStorage.setItem(`pia_unlocked_${targetUser.id}`, "1");
     // Trigger immediately so the PDF downloads in the same user gesture chain.
     generateDeepReport(targetUser, results);
   };

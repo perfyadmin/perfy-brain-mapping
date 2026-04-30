@@ -7,6 +7,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Building2, GraduationCap, Briefcase, Lock, ArrowRight } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 type Audience = "individual" | "working" | "organization" | "group";
 
@@ -50,6 +52,17 @@ function priceAfter(addon: AddOn, groupDiscount: boolean): number {
   return p;
 }
 
+const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
   const [audience, setAudience] = useState<Audience>("individual");
   const [selected, setSelected] = useState<Record<string, boolean>>({ brain: true });
@@ -76,14 +89,99 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
     setSubmitted(false);
   };
 
-  const handlePay = () => {
-    // Simulated payment success — wire to a payment provider later.
+  const handlePay = async () => {
     setSubmitted(true);
-    // Close immediately and trigger the download in the same gesture chain so the
-    // browser doesn't re-open the plans dialog or block the file.
-    onOpenChange(false);
-    onUnlock();
-    setSubmitted(false);
+    const resLoaded = await loadRazorpay();
+    
+    if (!resLoaded) {
+      toast({ title: "Error", description: "Razorpay SDK failed to load. Are you online?", variant: "destructive" });
+      setSubmitted(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("mm_token");
+      
+      // 1. Create order on backend
+      const orderRes = await fetch(`${API_BASE_URL}/payment/create-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount: total })
+      });
+      
+      const orderData = await orderRes.json();
+      
+      if (!orderRes.ok) throw new Error(orderData.message || "Failed to create order");
+
+      // 2. Initialize Razorpay Checkout
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Perfy",
+        description: "Brain Mapping Detailed Report",
+        image: "https://perfy.com/logo.png", // Replace with real logo if needed
+        order_id: orderData.orderId,
+        handler: async function (response: any) {
+          try {
+            // 3. Verify payment on backend
+            const verifyRes = await fetch(`${API_BASE_URL}/payment/verify`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+              })
+            });
+
+            if (verifyRes.ok) {
+              toast({ title: "Payment Successful!", description: "Your detailed report is now unlocked." });
+              onOpenChange(false);
+              onUnlock();
+            } else {
+              const verifyData = await verifyRes.json();
+              toast({ title: "Verification Failed", description: verifyData.message, variant: "destructive" });
+            }
+          } catch (err) {
+            console.error(err);
+            toast({ title: "Error", description: "Something went wrong during verification.", variant: "destructive" });
+          } finally {
+            setSubmitted(false);
+          }
+        },
+        prefill: {
+          name: contactName || "User",
+          email: contactEmail || "user@example.com",
+        },
+        theme: {
+          color: "#3b82f6", // Primary blue color
+        },
+        modal: {
+          ondismiss: function() {
+            setSubmitted(false);
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        toast({ title: "Payment Failed", description: response.error.description, variant: "destructive" });
+        setSubmitted(false);
+      });
+      rzp.open();
+
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Could not initiate payment.", variant: "destructive" });
+      setSubmitted(false);
+    }
   };
 
   return (

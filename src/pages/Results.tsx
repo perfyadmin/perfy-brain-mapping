@@ -13,6 +13,7 @@ export default function ResultsPage() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
   const [responses, setResponses] = useState<Responses | null>(null);
+  const [unlocked, setUnlocked] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
@@ -28,6 +29,7 @@ export default function ResultsPage() {
           const data = await res.json();
           if (data.completed && data.responses) {
             setResponses(data.responses);
+            setUnlocked(data.unlocked || false);
             setReady(true);
           } else {
             navigate("/assessment");
@@ -62,7 +64,7 @@ export default function ResultsPage() {
             <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>Dashboard</Button>
           </div>
         </div>
-        {responses && <ReportSummary targetUser={user} responses={responses} />}
+        {responses && <ReportSummary targetUser={user} responses={responses} unlocked={unlocked} setUnlocked={setUnlocked} />}
       </div>
     </div>
   );
