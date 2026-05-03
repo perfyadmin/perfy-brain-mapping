@@ -11,6 +11,7 @@ import {
   Check, Sparkles, Brain,
 } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
+import { API_BASE_URL } from "@/lib/api";
 
 type Audience = "individual" | "working" | "organization" | "group";
 
@@ -28,15 +29,15 @@ const PLANS: Record<Exclude<Audience, "organization" | "group">, { title: string
     title: "Individual",
     addons: [
       { id: "brain", label: "Brain Mapping (Detailed Report)", base: 1000, discountPct: 20, helper: "Full 20-page interpretation report", required: true },
-      { id: "tech",  label: "Technical Counseling Session", base: 500, helper: "1-on-1 session with our specialist" },
-      { id: "career",label: "Course Selection + Career Guidance (School & College)", base: 500, helper: "Personalised academic & career roadmap" },
+      { id: "tech", label: "Technical Counseling Session", base: 800, helper: "1-on-1 session with our specialist" },
+      { id: "career", label: "Course Selection + Career Guidance (School & College)", base: 800, helper: "Personalised academic & career roadmap" },
     ],
   },
   working: {
     title: "Working Professional",
     addons: [
       { id: "brain", label: "Brain Mapping (Detailed Report)", base: 1000, helper: "Full 20-page interpretation report", required: true },
-      { id: "tech",  label: "Technical Counseling Session", base: 500, helper: "1-on-1 session with our specialist" },
+      { id: "tech", label: "Technical Counseling Session", base: 800, helper: "1-on-1 session with our specialist" },
     ],
   },
 };
@@ -56,7 +57,7 @@ export default function PricingPage() {
   const [contactEmail, setContactEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const isContact = audience === "organization";
+  const isContact = audience === "organization" || audience === "group";
   const isGroup = audience === "group";
   const plan = !isContact ? PLANS[(isGroup ? "individual" : audience) as keyof typeof PLANS] : null;
 
@@ -72,6 +73,32 @@ export default function PricingPage() {
     setAudience(v as Audience);
     setSelected({ brain: true });
     setSubmitted(false);
+  };
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submitContact = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/sales`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contactName,
+          email: contactEmail,
+          scope: audience,
+          message: "Custom Plan Request from Brain Mapping Pricing Page"
+        })
+      });
+      if (res.ok) {
+        setSubmitted(true);
+        setTimeout(() => { setSubmitted(false); setContactName(""); setContactEmail(""); }, 3000);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -139,11 +166,10 @@ export default function PricingPage() {
                         key={a.id}
                         type="button"
                         onClick={() => !a.required && setSelected(s => ({ ...s, [a.id]: !s[a.id] }))}
-                        className={`w-full text-left rounded-xl border-2 p-4 transition-all ${
-                          checked
-                            ? "border-primary bg-primary/5 shadow-md"
-                            : "border-border hover:border-primary/40"
-                        }`}
+                        className={`w-full text-left rounded-xl border-2 p-4 transition-all ${checked
+                          ? "border-primary bg-primary/5 shadow-md"
+                          : "border-border hover:border-primary/40"
+                          }`}
                       >
                         <div className="flex items-start gap-3">
                           <Checkbox checked={checked} disabled={a.required} className="mt-1 pointer-events-none" />
@@ -219,12 +245,14 @@ export default function PricingPage() {
             </TabsContent>
           )}
 
-          <TabsContent value="organization" className="space-y-3">
-            <Card className="border-2 border-primary/20 shadow-elevated">
-              <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-secondary/5">
-                <CardTitle className="text-base font-display flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-primary" /> Organization — Custom Plan
-                </CardTitle>
+          {isContact && (
+            <TabsContent value={audience} className="space-y-3">
+              <Card className="border-2 border-primary/20 shadow-elevated">
+                <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-secondary/5">
+                  <CardTitle className="text-base font-display flex items-center gap-2">
+                    {audience === "group" ? <Users className="w-4 h-4 text-primary" /> : <Building2 className="w-4 h-4 text-primary" />}
+                    {audience === "group" ? "Group / Students" : "Organization"} — Custom Plan
+                  </CardTitle>
               </CardHeader>
               <CardContent className="pt-5 space-y-4">
                 <p className="text-sm text-muted-foreground">
@@ -244,14 +272,15 @@ export default function PricingPage() {
                 </div>
                 <Button
                   className="w-full gradient-primary text-primary-foreground"
-                  disabled={!contactName || !contactEmail || submitted}
-                  onClick={() => { setSubmitted(true); setTimeout(() => setSubmitted(false), 1500); }}
+                  disabled={!contactName || !contactEmail || submitted || isSubmitting}
+                  onClick={submitContact}
                 >
-                  {submitted ? "✓ Sent! We'll be in touch." : "Contact Sales Team"}
+                  {isSubmitting ? "Sending..." : submitted ? "✓ Sent! We'll be in touch." : "Contact Sales Team"}
                 </Button>
               </CardContent>
             </Card>
-          </TabsContent>
+            </TabsContent>
+          )}
         </Tabs>
 
         <p className="text-center text-xs text-muted-foreground italic mt-8">
