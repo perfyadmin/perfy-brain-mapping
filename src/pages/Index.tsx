@@ -25,18 +25,18 @@ const taglines = [
 
 // Famous personalities — used as a "Which legend matches you?" teaser strip on the home page.
 const archetypes = [
-  { emoji: "🚀", name: "Elon Musk",        type: "INTJ — Visionary Strategist",     accent: "from-cyan-500/20 to-blue-500/10",     ring: "ring-cyan-400/40" },
-  { emoji: "👑", name: "Alexander the Great", type: "Eagle (D) — Bold Ruler",        accent: "from-violet-500/20 to-fuchsia-500/10", ring: "ring-violet-400/40" },
-  { emoji: "🎨", name: "Leonardo da Vinci", type: "Polymath — All 8 Intelligences",  accent: "from-fuchsia-500/20 to-purple-500/10", ring: "ring-fuchsia-400/40" },
-  { emoji: "🧪", name: "Albert Einstein",   type: "INTP — Eternal Learner",          accent: "from-emerald-500/20 to-teal-500/10",   ring: "ring-emerald-400/40" },
-  { emoji: "💎", name: "Oprah Winfrey",     type: "ENFJ — Emotional Conductor",      accent: "from-amber-500/20 to-orange-500/10",   ring: "ring-amber-400/40" },
-  { emoji: "🍎", name: "Steve Jobs",        type: "ENTJ — Creative Commander",       accent: "from-rose-500/20 to-pink-500/10",      ring: "ring-rose-400/40" },
+  { emoji: "🚀", name: "Elon Musk", type: "INTJ — Visionary Strategist", accent: "from-cyan-500/20 to-blue-500/10", ring: "ring-cyan-400/40" },
+  { emoji: "👑", name: "Alexander the Great", type: "Eagle (D) — Bold Ruler", accent: "from-violet-500/20 to-fuchsia-500/10", ring: "ring-violet-400/40" },
+  { emoji: "🎨", name: "Leonardo da Vinci", type: "Polymath — All 8 Intelligences", accent: "from-fuchsia-500/20 to-purple-500/10", ring: "ring-fuchsia-400/40" },
+  { emoji: "🧪", name: "Albert Einstein", type: "INTP — Eternal Learner", accent: "from-emerald-500/20 to-teal-500/10", ring: "ring-emerald-400/40" },
+  { emoji: "💎", name: "Oprah Winfrey", type: "ENFJ — Emotional Conductor", accent: "from-amber-500/20 to-orange-500/10", ring: "ring-amber-400/40" },
+  { emoji: "🍎", name: "Steve Jobs", type: "ENTJ — Creative Commander", accent: "from-rose-500/20 to-pink-500/10", ring: "ring-rose-400/40" },
 ];
 
 const testimonials = [
-  { name: "Dr. Priya Sharma", role: "Career Counselor", text: "This platform transformed how I deliver career guidance. The reports are professional and deeply insightful." },
-  { name: "Arjun Mehta", role: "HR Director", text: "We use it for all employee assessments. The company-wise filtering and reports save us hours." },
-  { name: "Sarah Johnson", role: "Student", text: "I finally understand my learning style and personality. The action plan helped me improve my study habits." },
+  { name: "D. Priya", role: "Career Counselor", text: "This platform transformed how I deliver career guidance. The reports are professional and deeply insightful." },
+  { name: "Arjun", role: "HR Director", text: "We use it for all employee assessments. The company-wise filtering and reports save us hours." },
+  { name: "Harish", role: "Student", text: "I finally understand my learning style and personality. The action plan helped me improve my study habits." },
 ];
 
 export default function Index() {
@@ -57,7 +57,7 @@ export default function Index() {
           <div className="absolute bottom-10 left-1/4 w-72 h-72 rounded-full bg-emerald-400/20 blur-3xl animate-blob-a" style={{ animationDelay: "2s" }} />
           {/* subtle grid sheen */}
           <div className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
-               style={{ backgroundImage: "linear-gradient(hsl(0 0% 100% / 0.6) 1px, transparent 1px), linear-gradient(90deg, hsl(0 0% 100% / 0.6) 1px, transparent 1px)", backgroundSize: "44px 44px" }} />
+            style={{ backgroundImage: "linear-gradient(hsl(0 0% 100% / 0.6) 1px, transparent 1px), linear-gradient(90deg, hsl(0 0% 100% / 0.6) 1px, transparent 1px)", backgroundSize: "44px 44px" }} />
         </div>
 
         <div className="max-w-6xl mx-auto px-4 py-20 md:py-28 relative">
@@ -235,7 +235,7 @@ export default function Index() {
             <Card key={t.name} className="shadow-card">
               <CardContent className="p-6">
                 <div className="flex items-center gap-1 mb-3">
-                  {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-primary text-primary" />)}
+                  {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-4 h-4 fill-primary text-primary" />)}
                 </div>
                 <p className="text-sm text-muted-foreground italic mb-4">"{t.text}"</p>
                 <p className="text-sm font-display font-semibold">{t.name}</p>
