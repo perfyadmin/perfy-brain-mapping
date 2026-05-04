@@ -893,7 +893,8 @@ export function generateDeepReport(user: User, results: AssessmentResults) {
     y += 2;
 
     y = subSubTitle(doc, "Career Growth Path", y);
-    y = para(doc, info.growthPath, MARGIN, y, CONTENT_W);
+    const growthSteps = info.growthPath.split("→").map(s => s.trim());
+    y = bullets(doc, growthSteps, MARGIN + 3, y, CONTENT_W - 6);
     y += 4;
   });
 
