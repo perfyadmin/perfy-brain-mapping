@@ -26,15 +26,15 @@ const PLANS: Record<Exclude<Audience, "organization" | "group">, { title: string
     title: "Individual",
     addons: [
       { id: "brain", label: "Brain Mapping (Detailed Report)", base: 1000, discountPct: 20, helper: "Full 20-page interpretation report", required: true },
-      { id: "tech", label: "Technical Counseling Session", base: 500, helper: "1-on-1 session with our specialist" },
-      { id: "career", label: "Course & Career Guidance (School / College)", base: 500, helper: "Personalised academic & career roadmap" },
+      { id: "tech", label: "Technical Counseling Session", base: 800, helper: "1-on-1 session with our specialist" },
+      { id: "career", label: "Course & Career Guidance (School / College)", base: 800, helper: "Personalised academic & career roadmap" },
     ],
   },
   working: {
     title: "Working Professional",
     addons: [
       { id: "brain", label: "Brain Mapping (Detailed Report)", base: 1000, helper: "Full 20-page interpretation report", required: true },
-      { id: "tech", label: "Technical Counseling Session", base: 500, helper: "1-on-1 session with our specialist" },
+      { id: "tech", label: "Technical Counseling Session", base: 800, helper: "1-on-1 session with our specialist" },
     ],
   },
 };
@@ -70,7 +70,7 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
   const [contactName, setContactName] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const isContact = audience === "organization";
+  const isContact = audience === "organization" || audience === "group";
   const isGroup = audience === "group";
 
   const plan = !isContact ? PLANS[(isGroup ? "individual" : audience) as keyof typeof PLANS] : null;
@@ -83,10 +83,44 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
     }, 0);
   }, [plan, selected, isGroup]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleAudience = (v: string) => {
     setAudience(v as Audience);
     setSelected({ brain: true });
     setSubmitted(false);
+  };
+
+  const submitContact = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/sales`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contactName,
+          email: contactEmail,
+          scope: audience,
+          message: "Custom Plan Request from Brain Mapping Results Page (Dialog)"
+        })
+      });
+      if (res.ok) {
+        setSubmitted(true);
+        setTimeout(() => { 
+          setSubmitted(false); 
+          setContactName(""); 
+          setContactEmail("");
+          onOpenChange(false);
+        }, 3000);
+      } else {
+        toast({ title: "Error", description: "Failed to send inquiry. Please try again.", variant: "destructive" });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handlePay = async () => {
@@ -264,13 +298,18 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
             </TabsContent>
           )}
 
-          <TabsContent value="organization" className="mt-4 space-y-3">
+          <TabsContent value={audience} className="mt-4 space-y-3">
             <Card>
               <CardContent className="p-5 space-y-4">
                 <div>
-                  <h3 className="font-display font-bold text-lg">Custom Organisation Plan</h3>
+                  <h3 className="font-display font-bold text-lg">
+                    {audience === "group" ? "Group / Student" : "Custom Organisation"} Plan
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Bulk pricing, dedicated dashboard, company-wise analytics, and on-demand counseling sessions for your team.
+                    {audience === "group" 
+                      ? "Special group pricing, academic discounts, and bulk report access for your school or study group." 
+                      : "Bulk pricing, dedicated dashboard, company-wise analytics, and on-demand counseling sessions for your team."
+                    } Tell us about your needs and our team will reach out.
                   </p>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -285,10 +324,10 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
                 </div>
                 <Button
                   className="w-full gradient-primary text-primary-foreground"
-                  disabled={!contactName || !contactEmail || submitted}
-                  onClick={() => { setSubmitted(true); setTimeout(() => { setSubmitted(false); onOpenChange(false); }, 900); }}
+                  disabled={!contactName || !contactEmail || submitted || isSubmitting}
+                  onClick={submitContact}
                 >
-                  {submitted ? "Sent!" : "Contact Sales Team"}
+                  {isSubmitting ? "Sending..." : submitted ? "✓ Sent! We'll be in touch." : "Contact Sales Team"}
                 </Button>
               </CardContent>
             </Card>

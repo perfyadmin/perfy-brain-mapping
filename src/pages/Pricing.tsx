@@ -204,8 +204,8 @@ export default function PricingPage() {
                     <div>
                       <p className="text-xs uppercase tracking-wider text-muted-foreground">Total Payable</p>
                       <p className="text-3xl font-display font-bold text-primary tabular-nums">₹{total}</p>
-                      {audience === "individual" && total === 1300 && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5">Brain Mapping ₹800 + Counseling ₹500 (after 20% off on mapping)</p>
+                      {audience === "individual" && total === 1600 && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Brain Mapping ₹800 + Counseling ₹800 (after 20% off on mapping)</p>
                       )}
                     </div>
                     <Button

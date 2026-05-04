@@ -7,7 +7,7 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
 } from "recharts";
 import { generateDeepReport } from "@/lib/pdfReport";
-import { Download, Lock, Brain, Sparkles, Lightbulb, Target, Compass } from "lucide-react";
+import { Download, Lock, Brain, Sparkles, Lightbulb, Target, Compass, Check } from "lucide-react";
 import { mbtiInterpretations } from "@/lib/interpretations";
 import { BrainLogo, SECTION_LOBE_COLORS } from "@/components/BrainLogo";
 import PaymentDialog from "@/components/PaymentDialog";
@@ -78,6 +78,12 @@ export default function ReportSummary({ targetUser, responses, unlocked, setUnlo
     { subject: "CQ", value: results.quotients.CQ },
   ];
 
+  // Recommended bundle price based on role
+  const isWorking = targetUser.role === "employee";
+  const mappingPrice = isWorking ? 1000 : 800; // Students get 20% off mapping
+  const counselingPrice = 800;
+  const bundleTotal = mappingPrice + counselingPrice;
+
   return (
     <div className="space-y-6">
       {/* HERO */}
@@ -110,7 +116,7 @@ export default function ReportSummary({ targetUser, responses, unlocked, setUnlo
                     className="rounded-xl gradient-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow"
                   >
                     {canDownload ? <Download className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
-                    {canDownload ? "Download Detailed Report (PDF)" : "Unlock Detailed Report"}
+                    {canDownload ? "Download Detailed Report (PDF)" : `Unlock for ₹${bundleTotal}`}
                   </Button>
                 </div>
               </div>
@@ -231,14 +237,14 @@ export default function ReportSummary({ targetUser, responses, unlocked, setUnlo
                 20+ pages of deep analysis, charts, action plan and career roadmap.
               </h3>
               <ul className="text-xs text-muted-foreground grid sm:grid-cols-2 gap-x-4 gap-y-1 mt-2">
-                <li>• Full DISC + MBTI interpretation</li>
-                <li>• 8 Multiple-Intelligence breakdown</li>
-                <li>• IQ • EQ • AQ • CQ deep dive</li>
-                <li>• Learning style guide</li>
-                <li>• SWOT analysis</li>
-                <li>• 0-2 / 2-5 / 5-10 year career roadmap</li>
-                <li>• Personalised action plan</li>
-                <li>• Left/Right brain dominance + recommendations</li>
+                <li><Check className="w-3 h-3 text-primary inline mr-1" /> Full DISC + MBTI interpretation</li>
+                <li><Check className="w-3 h-3 text-primary inline mr-1" /> 8 Multiple-Intelligence breakdown</li>
+                <li><Check className="w-3 h-3 text-primary inline mr-1" /> IQ • EQ • AQ • CQ deep dive</li>
+                <li><Check className="w-3 h-3 text-primary inline mr-1" /> Learning style guide</li>
+                <li><Check className="w-3 h-3 text-primary inline mr-1" /> SWOT analysis</li>
+                <li><Check className="w-3 h-3 text-primary inline mr-1" /> 0-2 / 2-5 / 5-10 year career roadmap</li>
+                <li><Check className="w-3 h-3 text-primary inline mr-1" /> Personalised action plan</li>
+                <li><Check className="w-3 h-3 text-primary inline mr-1" /> Left vs Right brain dominance</li>
               </ul>
             </div>
             <Button
@@ -247,7 +253,7 @@ export default function ReportSummary({ targetUser, responses, unlocked, setUnlo
               className="rounded-xl gradient-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow shrink-0"
             >
               {canDownload ? <Download className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
-              {canDownload ? "Download PDF" : "Unlock for ₹1300"}
+              {canDownload ? "Download PDF" : `Unlock for ₹${bundleTotal}`}
             </Button>
           </div>
         </CardContent>
