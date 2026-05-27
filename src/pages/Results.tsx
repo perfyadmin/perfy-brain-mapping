@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import ReportSummary from "@/components/ReportSummary";
+import FeedbackForm from "@/components/FeedbackForm";
 import { BrainLogo } from "@/components/BrainLogo";
 
 import { API_BASE_URL } from "@/lib/api";
@@ -16,6 +17,7 @@ export default function ResultsPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState<string | null>(null);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
@@ -34,6 +36,7 @@ export default function ResultsPage() {
             setUnlocked(data.unlocked || false);
             setPaymentStatus(data.paymentStatus || null);
             setPaymentScreenshotUrl(data.paymentScreenshotUrl || null);
+            setFeedbackSubmitted(data.feedbackSubmitted || false);
             setReady(true);
           } else {
             navigate("/assessment");
@@ -112,6 +115,8 @@ export default function ResultsPage() {
               </Button>
             </div>
           </div>
+        ) : unlocked && !feedbackSubmitted ? (
+          <FeedbackForm onSubmitSuccess={() => setFeedbackSubmitted(true)} />
         ) : (
           <>
             {paymentStatus === "rejected" && (
