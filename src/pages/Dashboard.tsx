@@ -70,7 +70,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => navigate("/results")} className="gradient-primary text-primary-foreground gap-1">View Results <ArrowRight className="w-4 h-4" /></Button>
-                  <Button variant="outline" onClick={() => navigate("/assessment")}>Retake</Button>
+                  {/* <Button variant="outline" onClick={() => navigate("/assessment")}>Retake</Button> */}
                 </div>
               </div>
             ) : (

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Building2, GraduationCap, Briefcase, Lock, ArrowRight } from "lucide-react";
+import { Sparkles, Building2, GraduationCap, Briefcase, Lock, ArrowRight, Upload, QrCode, Ticket } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
@@ -69,6 +69,116 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
   const [contactEmail, setContactEmail] = useState("");
   const [contactName, setContactName] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  const [upiId, setUpiId] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
+  const [applyingDiscount, setApplyingDiscount] = useState(false);
+  const [screenshot, setScreenshot] = useState("");
+  const [screenshotName, setScreenshotName] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Load UPI config from backend
+  useEffect(() => {
+    if (!open) return;
+    const fetchUpiConfig = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/payment/upi-config`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.upiId) {
+            setUpiId(data.upiId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load UPI config", err);
+      }
+    };
+    fetchUpiConfig();
+  }, [open]);
+
+  // Handle discount code application
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) return;
+    setApplyingDiscount(true);
+    try {
+      const token = localStorage.getItem("mm_token");
+      const res = await fetch(`${API_BASE_URL}/payment/apply-discount`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ code: discountCode })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "Success! 🎉", description: "Discount code applied. Your report is now unlocked." });
+        onOpenChange(false);
+        onUnlock();
+      } else {
+        toast({ title: "Invalid Code", description: data.message || "Failed to apply discount code.", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setApplyingDiscount(false);
+    }
+  };
+
+  // Convert uploaded image file to base64
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Please upload an image smaller than 5MB.", variant: "destructive" });
+      return;
+    }
+
+    setScreenshotName(file.name);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setScreenshot(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Submit payment screenshot to backend S3
+  const handleUpiPaySubmit = async () => {
+    if (!screenshot) {
+      toast({ title: "Upload Required", description: "Please select your transaction screenshot first.", variant: "destructive" });
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const token = localStorage.getItem("mm_token");
+      const res = await fetch(`${API_BASE_URL}/payment/submit-screenshot`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ screenshot })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "Screenshot Submitted! 🚀", description: "Our team is verifying your payment. Your report will unlock shortly!" });
+        onOpenChange(false);
+        // Force a page reload to pull the new "Pending Verification" assessment state
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        toast({ title: "Submission Failed", description: data.message || "Failed to upload screenshot.", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const isContact = audience === "organization" || audience === "group";
   const isGroup = audience === "group";
@@ -280,20 +390,96 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
                 );
               })}
 
-              {/* Total */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-primary/5 to-secondary/5 border-2 border-primary/20">
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Total Payable</p>
-                  <p className="text-3xl font-display font-bold text-primary tabular-nums">₹{total}</p>
+              {/* Discount Code Section */}
+              <div className="p-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 space-y-2 mt-4">
+                <Label className="text-xs font-bold flex items-center gap-1.5 text-primary">
+                  <Ticket className="w-3.5 h-3.5" /> Have a Discount Code?
+                </Label>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Enter code (e.g. FREE100)" 
+                    value={discountCode} 
+                    onChange={e => setDiscountCode(e.target.value)} 
+                    className="h-9 text-xs"
+                  />
+                  <Button 
+                    size="sm" 
+                    onClick={handleApplyDiscount} 
+                    disabled={applyingDiscount || !discountCode.trim()} 
+                    className="gradient-primary text-primary-foreground h-9 font-semibold text-xs whitespace-nowrap px-4"
+                  >
+                    {applyingDiscount ? "Applying..." : "Apply Code"}
+                  </Button>
                 </div>
-                <Button
-                  size="lg"
-                  className="gradient-primary text-primary-foreground gap-2 hover:scale-105 transition-transform"
-                  onClick={handlePay}
-                  disabled={submitted || total === 0}
-                >
-                  {submitted ? "Processing..." : <>Pay &amp; Unlock <ArrowRight className="w-4 h-4" /></>}
-                </Button>
+                <p className="text-[10px] text-muted-foreground">Valid single-use codes immediately unlock your report for download.</p>
+              </div>
+
+              {/* UPI Payment / QR Code Section */}
+              <div className="p-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5 space-y-4">
+                <div className="flex items-center justify-between gap-4 flex-wrap border-b border-primary/10 pb-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Total Payable</p>
+                    <p className="text-2xl font-display font-bold text-primary tabular-nums">₹{total}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-primary font-semibold">
+                    <QrCode className="w-4 h-4" /> Pay via UPI QR Code
+                  </div>
+                </div>
+
+                {upiId ? (
+                  <div className="flex flex-col gap-4 items-center">
+                    {/* Render Dynamic QR Code */}
+                    <div className="text-center space-y-2 w-full">
+                      <div className="inline-block p-3 rounded-2xl bg-white border border-primary/15 shadow-md">
+                        <img 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${upiId.trim()}&pn=Perfy&am=${total}&cu=INR`)}`} 
+                          alt="UPI QR Code" 
+                          className="w-44 h-44 object-contain mx-auto"
+                        />
+                      </div>
+                      <p className="text-xs font-semibold mt-1">Scan using GPay, PhonePe, Paytm, or BHIM</p>
+                      <p className="text-[11px] text-muted-foreground font-mono bg-muted py-1 px-2.5 rounded-lg inline-block select-all">UPI ID: {upiId}</p>
+                    </div>
+
+                    {/* Screenshot File Upload */}
+                    <div className="w-full space-y-2">
+                      <Label className="text-xs font-bold block mb-1">Upload Payment Screenshot *</Label>
+                      <div className="flex flex-col gap-2">
+                        <Input 
+                          type="file" 
+                          id="upi-screenshot" 
+                          accept="image/*" 
+                          onChange={handleFileChange} 
+                          className="hidden" 
+                        />
+                        <Label 
+                          htmlFor="upi-screenshot" 
+                          className="cursor-pointer border border-dashed border-primary/40 hover:border-primary rounded-xl p-3 flex flex-col items-center gap-1.5 bg-card hover:bg-primary/5 transition-all text-center"
+                        >
+                          <Upload className="w-5 h-5 text-primary" />
+                          <span className="text-xs font-medium text-foreground">
+                            {screenshotName ? `Selected: ${screenshotName}` : "Choose screenshot image"}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground">Formats: PNG, JPG, JPEG (Max 5MB)</span>
+                        </Label>
+                      </div>
+                    </div>
+
+                    {/* Submit Verification Button */}
+                    <Button
+                      size="lg"
+                      className="w-full gradient-primary text-primary-foreground gap-2 font-semibold hover:scale-[1.01] transition-transform shadow-md mt-2"
+                      onClick={handleUpiPaySubmit}
+                      disabled={isUploading || !screenshot || total === 0}
+                    >
+                      {isUploading ? "Uploading Screenshot..." : <>Submit Transaction for Approval <ArrowRight className="w-4 h-4" /></>}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 text-xs text-center">
+                    ⚠️ UPI configuration is pending. Please contact admin support or enter a discount code to unlock.
+                  </div>
+                )}
               </div>
             </TabsContent>
           )}
