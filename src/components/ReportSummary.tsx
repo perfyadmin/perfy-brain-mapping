@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { type User, useAuth } from "@/lib/auth";
 import { calculateAllResults, type Responses } from "@/lib/scoring";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,10 +7,13 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
 } from "recharts";
 import { generateDeepReport } from "@/lib/pdfReport";
-import { Download, Lock, Brain, Sparkles, Lightbulb, Target, Compass, Check } from "lucide-react";
+import { Download, Lock, Brain, Sparkles, Lightbulb, Target, Compass, Check, Camera, Trash2, Upload, Video } from "lucide-react";
 import { mbtiInterpretations } from "@/lib/interpretations";
 import { BrainLogo, SECTION_LOBE_COLORS } from "@/components/BrainLogo";
 import PaymentDialog from "@/components/PaymentDialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { API_BASE_URL } from "@/lib/api";
 
 const birdIcons: Record<string, string> = { Eagle: "🦅", Parrot: "🦜", Dove: "🕊️", Owl: "🦉" };
 
@@ -23,10 +26,10 @@ const archetypeLines: Record<string, string> = {
   INFJ: "An INFJ — the quiet idealist, like Martin Luther King Jr.",
   INFP: "An INFP — the dreamer-poet, like J.R.R. Tolkien.",
   ENFJ: "An ENFJ — the inspirer, like Oprah Winfrey.",
-  ENFP: "An ENFP — the spark, like Robin Williams.",
-  ISTJ: "An ISTJ — the dependable architect, like Warren Buffett.",
-  ISFJ: "An ISFJ — the quiet protector, like Mother Teresa.",
-  ESTJ: "An ESTJ — the executor, like Michelle Obama.",
+  ENFP: "An ENFP — the creative explorer, like Walt Disney.",
+  ISTJ: "An ISTJ — the reliable inspector, like George Washington.",
+  ISFJ: "An ISFJ — the dedicated protector, like Mother Teresa.",
+  ESTJ: "An ESTJ — the systematic director, like John D. Rockefeller.",
   ESFJ: "An ESFJ — the host of the room, like Taylor Swift.",
   ISTP: "An ISTP — the calm builder, like Clint Eastwood.",
   ISFP: "An ISFP — the artist's soul, like Frida Kahlo.",
@@ -49,14 +52,111 @@ export default function ReportSummary({ targetUser, responses, unlocked, setUnlo
   const [payOpen, setPayOpen] = useState(false);
   const canDownload = isAdmin || unlocked || viewer?.email === "hari@gmail.com";
 
+  // Selfie / Upload photo states
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [activePhotoTab, setActivePhotoTab] = useState<"upload" | "webcam">("upload");
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const startWebcam = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 300, height: 300, facingMode: "user" },
+        audio: false
+      });
+      setStream(mediaStream);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      }, 50);
+    } catch (err) {
+      console.error("Error accessing webcam:", err);
+      toast({
+        title: "Camera Access Error",
+        description: "Could not open your camera. Please check permissions or upload an image instead.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const stopWebcam = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
+  const handlePhotoUploadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please choose an image under 5MB.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPhotoBase64(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleConfirmDownload = async () => {
+    // 1. Instantly trigger PDF download using local base64 for optimal zero-lag UX!
+    generateDeepReport(targetUser, results, photoBase64 || undefined);
+    setPhotoOpen(false);
+    stopWebcam();
+
+    // 2. Upload to S3 and save URL in database in the background
+    if (photoBase64) {
+      try {
+        const token = localStorage.getItem("mm_token");
+        await fetch(`${API_BASE_URL}/assessment/profile-photo`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ photo: photoBase64 })
+        });
+      } catch (err) {
+        console.error("Failed to save profile photo in database:", err);
+      }
+    }
+  };
+
+  const handleSkipDownload = () => {
+    generateDeepReport(targetUser, results);
+    setPhotoOpen(false);
+    stopWebcam();
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    setPhotoOpen(open);
+    if (!open) {
+      stopWebcam();
+    }
+  };
+
   const handleUnlock = () => {
     setUnlocked(true);
-    // Trigger immediately so the PDF downloads in the same user gesture chain.
-    generateDeepReport(targetUser, results);
+    setPhotoOpen(true);
   };
+
   const handleDownloadClick = () => {
-    if (canDownload) generateDeepReport(targetUser, results);
-    else setPayOpen(true);
+    if (canDownload) {
+      setPhotoOpen(true);
+    } else {
+      setPayOpen(true);
+    }
   };
 
   // Brain dominance: real value from scoring (works for all roles now)
@@ -260,6 +360,163 @@ export default function ReportSummary({ targetUser, responses, unlocked, setUnlo
       </Card>
 
       <PaymentDialog open={payOpen} onOpenChange={setPayOpen} onUnlock={handleUnlock} />
+
+      {/* Dynamic Profile Photo Collection Modal */}
+      <Dialog open={photoOpen} onOpenChange={handleDialogChange}>
+        <DialogContent className="max-w-md w-[95%] glass-panel rounded-2xl border border-primary/20 shadow-elevated p-6 bg-card/95">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-xl font-display font-bold flex items-center justify-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary animate-pulse" /> Add Your Profile Photo
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Add a professional photo or capture a quick selfie to personalize the cover page of your 20+ page deep interpretation report.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Simple Tab Toggler */}
+          <div className="flex bg-muted/50 p-1 rounded-xl border border-border mt-4">
+            <button
+              type="button"
+              onClick={() => { setActivePhotoTab("upload"); stopWebcam(); }}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                activePhotoTab === "upload" 
+                  ? "bg-card text-foreground shadow-sm animate-fade-in" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Upload className="w-3.5 h-3.5" /> Upload File
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActivePhotoTab("webcam"); startWebcam(); }}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                activePhotoTab === "webcam" 
+                  ? "bg-card text-foreground shadow-sm animate-fade-in" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5" /> Take Selfie
+            </button>
+          </div>
+
+          <div className="mt-5 flex flex-col items-center justify-center min-h-[180px]">
+            {activePhotoTab === "upload" ? (
+              <div className="w-full flex flex-col items-center justify-center gap-4">
+                {photoBase64 ? (
+                  <div className="relative group w-32 h-32 rounded-2xl overflow-hidden border-2 border-primary/30 shadow-md">
+                    <img src={photoBase64} alt="Profile preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPhotoBase64(null)}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity duration-200"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-400" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="file"
+                      id="profile-photo-input"
+                      accept="image/*"
+                      onChange={handlePhotoUploadChange}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="profile-photo-input"
+                      className="cursor-pointer w-full border border-dashed border-primary/40 hover:border-primary rounded-xl p-8 flex flex-col items-center gap-2 bg-card hover:bg-primary/5 transition-all text-center"
+                    >
+                      <Upload className="w-8 h-8 text-primary" />
+                      <span className="text-xs font-semibold text-foreground">Select local image file</span>
+                      <span className="text-[10px] text-muted-foreground">Supports PNG, JPG, JPEG (Max 5MB)</span>
+                    </label>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="w-full flex flex-col items-center justify-center gap-4">
+                {photoBase64 ? (
+                  <div className="relative group w-32 h-32 rounded-2xl overflow-hidden border-2 border-primary/30 shadow-md">
+                    <img src={photoBase64} alt="Selfie preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => { setPhotoBase64(null); startWebcam(); }}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity duration-200"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-400" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative w-full max-w-[280px] aspect-square rounded-2xl overflow-hidden border border-border bg-black/10 flex items-center justify-center">
+                    {stream ? (
+                      <>
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const video = videoRef.current;
+                            const canvas = canvasRef.current;
+                            if (video && canvas) {
+                              const ctx = canvas.getContext("2d");
+                              if (ctx) {
+                                canvas.width = 300;
+                                canvas.height = 300;
+                                const minDim = Math.min(video.videoWidth, video.videoHeight);
+                                const sx = (video.videoWidth - minDim) / 2;
+                                const sy = (video.videoHeight - minDim) / 2;
+                                ctx.drawImage(video, sx, sy, minDim, minDim, 0, 0, 300, 300);
+                                setPhotoBase64(canvas.toDataURL("image/jpeg", 0.95));
+                                stopWebcam();
+                              }
+                            }
+                          }}
+                          className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground hover:scale-105 transition-transform p-3 rounded-full shadow-lg"
+                        >
+                          <Camera className="w-5 h-5" />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="text-center p-4">
+                        <Button type="button" onClick={startWebcam} variant="outline" size="sm" className="gap-2">
+                          <Camera className="w-4 h-4 text-primary" /> Start Camera
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Hidden canvas for capturing selfie */}
+                <canvas ref={canvasRef} className="hidden" />
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="flex gap-3 mt-6 border-t border-border pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSkipDownload}
+              className="flex-1 rounded-xl text-xs"
+            >
+              Skip &amp; Download
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmDownload}
+              disabled={!photoBase64}
+              className="flex-1 rounded-xl text-xs gradient-primary text-primary-foreground shadow-md"
+            >
+              Confirm &amp; Download
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
