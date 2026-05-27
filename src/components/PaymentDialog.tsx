@@ -144,6 +144,19 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
     reader.readAsDataURL(file);
   };
 
+  const isContact = audience === "organization" || audience === "group";
+  const isGroup = audience === "group";
+
+  const plan = !isContact ? PLANS[(isGroup ? "individual" : audience) as keyof typeof PLANS] : null;
+
+  const total = useMemo(() => {
+    if (!plan) return 0;
+    return plan.addons.reduce((sum, a) => {
+      if (!selected[a.id] && !a.required) return sum;
+      return sum + priceAfter(a, isGroup);
+    }, 0);
+  }, [plan, selected, isGroup]);
+
   // Submit payment screenshot to backend S3
   const handleUpiPaySubmit = async () => {
     if (!screenshot) {
@@ -152,6 +165,14 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
     }
     setIsUploading(true);
     try {
+      const planTitle = audience === "group" ? "Group / Students" : (plan ? plan.title : audience);
+      const selectedAddonLabels = plan
+        ? plan.addons
+            .filter(a => selected[a.id] || a.required)
+            .map(a => a.label)
+            .join(", ")
+        : "";
+
       const token = localStorage.getItem("mm_token");
       const res = await fetch(`${API_BASE_URL}/payment/submit-screenshot`, {
         method: "POST",
@@ -159,7 +180,12 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ screenshot })
+        body: JSON.stringify({
+          screenshot,
+          selectedPlan: planTitle,
+          selectedAddons: selectedAddonLabels,
+          payableAmount: total
+        })
       });
       const data = await res.json();
       if (res.ok) {
@@ -179,19 +205,6 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
       setIsUploading(false);
     }
   };
-
-  const isContact = audience === "organization" || audience === "group";
-  const isGroup = audience === "group";
-
-  const plan = !isContact ? PLANS[(isGroup ? "individual" : audience) as keyof typeof PLANS] : null;
-
-  const total = useMemo(() => {
-    if (!plan) return 0;
-    return plan.addons.reduce((sum, a) => {
-      if (!selected[a.id] && !a.required) return sum;
-      return sum + priceAfter(a, isGroup);
-    }, 0);
-  }, [plan, selected, isGroup]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
