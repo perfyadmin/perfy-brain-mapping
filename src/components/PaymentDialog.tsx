@@ -340,16 +340,41 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-display flex items-center gap-2">
             <Lock className="w-5 h-5 text-primary" /> Unlock Your Detailed Report
           </DialogTitle>
           <DialogDescription>
-            Choose your plan and add-ons. The base detailed report is required; counseling and guidance are optional add-ons.
+            Enter your discount code to immediately unlock and download your detailed report.
           </DialogDescription>
         </DialogHeader>
 
+        {/* Discount Code Section */}
+        <div className="p-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 space-y-2 mt-4">
+          <Label className="text-xs font-bold flex items-center gap-1.5 text-primary">
+            <Ticket className="w-3.5 h-3.5" /> Have a Discount Code?
+          </Label>
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Enter code (e.g. FREE100)" 
+              value={discountCode} 
+              onChange={e => setDiscountCode(e.target.value)} 
+              className="h-9 text-xs"
+            />
+            <Button 
+              size="sm" 
+              onClick={handleApplyDiscount} 
+              disabled={applyingDiscount || !discountCode.trim()} 
+              className="gradient-primary text-primary-foreground h-9 font-semibold text-xs whitespace-nowrap px-4"
+            >
+              {applyingDiscount ? "Applying..." : "Apply Code"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Valid single-use codes immediately unlock your report for download.</p>
+        </div>
+
+        {/* Temporarily commented out plan details and payment options
         <Tabs value={audience} onValueChange={handleAudience} className="mt-2">
           <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto">
             <TabsTrigger value="individual" className="gap-1 text-xs"><GraduationCap className="w-3.5 h-3.5" /> Individual</TabsTrigger>
@@ -358,7 +383,6 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
             <TabsTrigger value="group" className="gap-1 text-xs"><Sparkles className="w-3.5 h-3.5" /> Group / Students</TabsTrigger>
           </TabsList>
 
-          {/* Individual / Working / Group share addon UI */}
           {!isContact && (
             <TabsContent value={audience} className="mt-4 space-y-3">
               {isGroup && (
@@ -403,31 +427,6 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
                 );
               })}
 
-              {/* Discount Code Section */}
-              <div className="p-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 space-y-2 mt-4">
-                <Label className="text-xs font-bold flex items-center gap-1.5 text-primary">
-                  <Ticket className="w-3.5 h-3.5" /> Have a Discount Code?
-                </Label>
-                <div className="flex gap-2">
-                  <Input 
-                    placeholder="Enter code (e.g. FREE100)" 
-                    value={discountCode} 
-                    onChange={e => setDiscountCode(e.target.value)} 
-                    className="h-9 text-xs"
-                  />
-                  <Button 
-                    size="sm" 
-                    onClick={handleApplyDiscount} 
-                    disabled={applyingDiscount || !discountCode.trim()} 
-                    className="gradient-primary text-primary-foreground h-9 font-semibold text-xs whitespace-nowrap px-4"
-                  >
-                    {applyingDiscount ? "Applying..." : "Apply Code"}
-                  </Button>
-                </div>
-                <p className="text-[10px] text-muted-foreground">Valid single-use codes immediately unlock your report for download.</p>
-              </div>
-
-              {/* UPI Payment / QR Code Section */}
               <div className="p-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5 space-y-4">
                 <div className="flex items-center justify-between gap-4 flex-wrap border-b border-primary/10 pb-3">
                   <div>
@@ -441,7 +440,6 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
 
                 {upiId ? (
                   <div className="flex flex-col gap-4 items-center">
-                    {/* Render Dynamic QR Code */}
                     <div className="text-center space-y-2 w-full">
                       <div className="inline-block p-3 rounded-2xl bg-white border border-primary/15 shadow-md">
                         <img 
@@ -454,7 +452,6 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
                       <p className="text-[11px] text-muted-foreground font-mono bg-muted py-1 px-2.5 rounded-lg inline-block select-all">UPI ID: {upiId}</p>
                     </div>
 
-                    {/* Screenshot File Upload */}
                     <div className="w-full space-y-2">
                       <Label className="text-xs font-bold block mb-1">Upload Payment Screenshot *</Label>
                       <div className="flex flex-col gap-2">
@@ -478,7 +475,6 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
                       </div>
                     </div>
 
-                    {/* Submit Verification Button */}
                     <Button
                       size="lg"
                       className="w-full gradient-primary text-primary-foreground gap-2 font-semibold hover:scale-[1.01] transition-transform shadow-md mt-2"
@@ -532,9 +528,10 @@ export default function PaymentDialog({ open, onOpenChange, onUnlock }: Props) {
             </Card>
           </TabsContent>
         </Tabs>
+        */}
 
         <DialogFooter className="text-[11px] text-muted-foreground italic">
-          Secure checkout • Instant report delivery • 100% confidential
+          Instant report delivery • 100% confidential
         </DialogFooter>
       </DialogContent>
     </Dialog>

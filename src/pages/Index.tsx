@@ -102,9 +102,9 @@ export default function Index() {
               <Button size="lg" className="bg-gradient-to-r from-amber-300 to-amber-500 text-foreground hover:from-amber-200 hover:to-amber-400 font-display font-semibold gap-2 hover:scale-105 transition-all shadow-elevated" onClick={() => navigate(user ? "/assessment" : "/register")}>
                 {user ? "Take Assessment" : "Get Started"} <ArrowRight className="w-4 h-4" />
               </Button>
-              <Button size="lg" className="bg-primary-foreground/15 border border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/25 hover:scale-105 transition-all backdrop-blur-sm" onClick={() => navigate("/pricing")}>
+              {/* <Button size="lg" className="bg-primary-foreground/15 border border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/25 hover:scale-105 transition-all backdrop-blur-sm" onClick={() => navigate("/pricing")}>
                 <Sparkles className="w-4 h-4 mr-1" /> View Plans
-              </Button>
+              </Button> */}
               {!user && (
                 <Button size="lg" className="bg-primary-foreground/15 border border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/25 hover:scale-105 transition-all backdrop-blur-sm" onClick={() => navigate("/login")}>
                   Login

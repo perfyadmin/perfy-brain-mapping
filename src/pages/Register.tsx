@@ -30,7 +30,6 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
     if (password !== confirmPassword) { setError("Passwords do not match."); return; }
-    if (role === "employee" && !companyCode) { setError("Please enter your company code."); return; }
     if (role === "student" && !school) { setError("Please enter your school/college name."); return; }
 
     setLoading(true);
@@ -80,7 +79,7 @@ export default function RegisterPage() {
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${role === "employee" ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/40"}`}>
                   <Briefcase className={`w-6 h-6 ${role === "employee" ? "text-primary" : "text-muted-foreground"}`} />
                   <div className="text-left">
-                    <p className={`font-semibold text-sm ${role === "employee" ? "text-primary" : "text-foreground"}`}> Employee</p>
+                    <p className={`font-semibold text-sm ${role === "employee" ? "text-primary" : "text-foreground"}`}> Individual</p>
                     <p className="text-xs text-muted-foreground">Performance system</p>
                   </div>
                 </button>
@@ -109,9 +108,9 @@ export default function RegisterPage() {
               <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border animate-fade-in">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><Building2 className="w-4 h-4 text-primary" /> Company Details</div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Company Code <span className="text-destructive">*</span></Label>
-                  <Input value={companyCode} onChange={e => setCompanyCode(e.target.value)} placeholder="Enter company code" required className="h-11" />
-                  <p className="text-xs text-muted-foreground">Ask your HR for the company code</p>
+                  <Label className="text-xs font-semibold">Company Code</Label>
+                  <Input value={companyCode} onChange={e => setCompanyCode(e.target.value)} placeholder="Enter company code" className="h-11" />
+                  <p className="text-xs text-muted-foreground">Ask your HR for the company code (optional)</p>
                 </div>
                 <div className="space-y-1.5"><Label className="text-xs font-semibold">Department</Label><Input value={department} onChange={e => setDepartment(e.target.value)} placeholder="e.g., Engineering, HR, Sales" className="h-11" /></div>
               </div>

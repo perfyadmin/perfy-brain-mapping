@@ -37,7 +37,7 @@ export default function AppHeader({ transparent = false }: { transparent?: boole
         </button>
 
         <nav className="flex items-center gap-1.5 sm:gap-2">
-          <Button
+          {/* <Button
             variant="outline"
             size="sm"
             className="shrink-0 gap-1.5 border-primary/40 text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
@@ -46,7 +46,7 @@ export default function AppHeader({ transparent = false }: { transparent?: boole
           >
             <Sparkles className="w-4 h-4" />
             <span className="text-xs sm:text-sm font-medium">View Plans</span>
-          </Button>
+          </Button> */}
 
           {showDashboard && (
             <Button
