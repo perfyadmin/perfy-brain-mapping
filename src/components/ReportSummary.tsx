@@ -216,7 +216,7 @@ export default function ReportSummary({ targetUser, responses, unlocked, setUnlo
                     className="rounded-xl gradient-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow"
                   >
                     {canDownload ? <Download className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
-                    {canDownload ? "Download Detailed Report (PDF)" : `Unlock for ₹${bundleTotal}`}
+                    {canDownload ? "Download Detailed Report (PDF)" : "Unlock"}
                   </Button>
                 </div>
               </div>
@@ -353,7 +353,7 @@ export default function ReportSummary({ targetUser, responses, unlocked, setUnlo
               className="rounded-xl gradient-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow shrink-0"
             >
               {canDownload ? <Download className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
-              {canDownload ? "Download PDF" : `Unlock for ₹${bundleTotal}`}
+              {canDownload ? "Download PDF" : "Unlock"}
             </Button>
           </div>
         </CardContent>
